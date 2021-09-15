@@ -6,6 +6,10 @@ data = read.csv('dataset_utrassom.csv', sep = ';', dec = ',')
 head(data)
 
 
+
+
+############ Curva Boulos da Esquerda 
+
 data2 = data[-c(11, 12),]
 
 
@@ -48,11 +52,12 @@ curvas2 = as.character(curvas2)
 names_data_y <- paste(curvas, curvas2)
 
 colnames(data_y) <- names_data_y
-
-
 #colnames(data_y) <- c('curva0', 'curva1', 'curva2', 'curva3', 'curva4', 'curva5', 'curva6', 'curva7', 'curva8', 'curva9')
-
 data_y$X <- x
+
+
+
+
 
 
 require(ggplot2)

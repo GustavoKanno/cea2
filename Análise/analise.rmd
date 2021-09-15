@@ -1,0 +1,366 @@
+---
+title: "Centro de Estatística Aplicada"
+author: |
+  | Gustavo Kanno\thanks{Número USP: 9795810} 
+  | José Cavalcante\thanks{Número USP: 9...}
+  | Rodrigo Marcel Araujo\thanks{Número USP: 9299208}
+date: "`r stringr::str_to_sentence(format(Sys.time(), '%B de %Y'))`"
+lang: pt-BR
+header-includes:
+  # - \usepackage[brazilian]{babel}
+  - \usepackage{float}
+  - \usepackage{amsmath}
+  - \usepackage{amsthm}
+  - \floatplacement{figure}{H}
+  - \usepackage{indentfirst}
+  - \setlength{\parindent}{4em}
+  - \setlength{\parskip}{1em}
+  - \usepackage{booktabs}
+  - \usepackage{dcolumn}
+  - \usepackage{bm}
+  - \usepackage{titling}
+  - \thanksmarkseries{arabic} % \thanks footnotes com numeros
+  - \usepackage[bottom]{footmisc} % corrige posição footnotes
+  - \usepackage{pdfpages}
+  - \usepackage{tocloft}
+  - \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+  - \usepackage{amssymb}
+  - \renewcommand\qedsymbol{$\blacksquare$}
+  - \usepackage{cleveref}
+  - \usepackage{subfig}
+output: 
+  pdf_document: 
+    fig_caption: yes
+    number_sections: no
+    toc: true
+    toc_depth: 4
+editor_options: 
+  chunk_output_type: console
+---
+
+\pagebreak
+
+\newcommand\invisiblesection[1]{%
+  \refstepcounter{section}%
+  \addcontentsline{toc}{section}{#1}%
+  \sectionmark{#1}}
+  
+<!-- \newcommand\invisiblesection[1]{% -->
+<!--   \refstepcounter{section}% -->
+<!--   \addcontentsline{toc}{section}{\protect\numberline{\thesection}#1}% -->
+<!--   \sectionmark{#1}} -->
+
+<!-- \newcommand\invisiblessection[1]{% -->
+<!--   \refstepcounter{subsection}% -->
+<!--   \addcontentsline{toc}{subsection}{\protect\numberline{\thesection}#1}% -->
+<!--   \sectionmark{#1}} -->
+
+
+```{r setup, include=FALSE}
+# paramentros padrao para os plots
+knitr::opts_chunk$set(fig.width = '\\textwidth',
+                      fig.align = 'center',
+                      out.width = "\\textwidth",
+                      warning = FALSE, echo = TRUE)
+
+
+library(robustbase)
+library(knitr)
+library(stargazer)
+library(tidyverse)
+library(gamlss)
+library(car)
+library(readxl)
+library(MASS)
+library(gridExtra)
+library(ggplot2)
+library(faraway)
+```
+
+
+```{r , include=FALSE}
+require(BatchGetSymbols)
+require(Amelia)
+require(reshape2)
+require(ggthemes) 
+require(plyr)
+```
+
+```{r , include=FALSE}
+
+suppressMessages(library(foreign))
+suppressMessages(library(dynlm))
+suppressMessages(library(car))
+suppressMessages(library(lmtest))
+suppressMessages(library(sandwich))
+suppressMessages(library(fpp2))
+suppressMessages(library(tseries))
+suppressMessages(library(zoo))
+suppressMessages(library(forecast))
+library(BETS)
+library(quantmod)
+library(fpp2)
+library(GeneCycle)
+```
+
+
+```{r , include=TRUE}
+library(matrixStats)
+library(ggplot2)
+```
+
+
+```{r, include=FALSE}
+
+setwd("C:\\Users\\Rodrigo Araujo\\Documents\\IME-USP\\CEA 2")
+
+```
+
+
+# Análise Descritiva
+
+```{r, include=TRUE}
+setwd("C:\\Users\\Rodrigo Araujo\\Documents\\IME-USP\\CEA 2")
+data = read.csv('dataset_utrassom.csv', sep = ';', dec = ',')
+head(data)
+```
+
+## Medidas Resumo
+
+```{r}
+## Medias
+data1 = data[, -1]
+colMeans(data1, na.rm = TRUE)
+
+#install.packages('matrixStats')
+require(matrixStats)
+
+paste(colnames(data1), colSds(as.matrix(data1), na.rm = TRUE))
+#colSds(as.matrix(data[, -1]), na.rm = TRUE)
+     
+```
+
+
+## Análise das curvas bolus lado esquerdo
+
+
+Criando a função gamma para simulação das curvas
+
+```{r, include=TRUE}
+data2 = data[-c(11, 12),]
+
+rownames(data2) <- seq(1, 23)
+
+# simulação da função gamma
+simulacao <- function(A, B, k){
+  
+  (A*(1 + (-1*exp(-1*k*x))) + B)
+  
+}
+
+```
+
+Aplicação da função gamma usando os parâmetros em função dos paciêntes.
+
+```{r}
+x <- seq(0, 70, 0.01)
+
+data_y <- data.frame('y' = rep(0, 7001))
+
+for (i in 1:nrow(data2)){
+  
+  y_1 <- simulacao(data2[i, 2], data2[i, 3], data2[i, 4])
+  data_y <- cbind(data_y, y_1)
+  
+}
+
+curvas = rep('curva', ncol(data_y))
+curvas2 = seq(0, 23)
+curvas2 = as.character(curvas2)
+names_data_y <- paste(curvas, curvas2)
+colnames(data_y) <- names_data_y
+data_y$X <- x
+
+
+```
+
+Gerando as curvas para todos os paciêntes.
+```{r}
+
+ggplot(data_y, aes(X)) +                    
+  geom_line(aes(y=`curva 1`), colour="red") + 
+  geom_line(aes(y=`curva 2`), colour="red") +
+  geom_line(aes(y=`curva 3`), colour="red") +
+  geom_line(aes(y=`curva 4`), colour="red") +
+  geom_line(aes(y=`curva 5`), colour="red") +
+  geom_line(aes(y=`curva 6`), colour="red") +
+  geom_line(aes(y=`curva 7`), colour="red") +
+  geom_line(aes(y=`curva 8`), colour="red") +
+  geom_line(aes(y=`curva 9`), colour="red") +
+  geom_line(aes(y=`curva 10`), colour="red") + 
+  geom_line(aes(y=`curva 11`), colour="red") +
+  geom_line(aes(y=`curva 12`), colour="red") +
+  geom_line(aes(y=`curva 13`), colour="red") +
+  geom_line(aes(y=`curva 14`), colour="red") +
+  geom_line(aes(y=`curva 15`), colour="blue") +
+  geom_line(aes(y=`curva 16`), colour="blue") +
+  geom_line(aes(y=`curva 17`), colour="blue") +
+  geom_line(aes(y=`curva 18`), colour="blue") +
+  geom_line(aes(y=`curva 19`), colour="blue") +
+  geom_line(aes(y=`curva 20`), colour="blue") +
+  geom_line(aes(y=`curva 21`), colour="blue") +
+  geom_line(aes(y=`curva 22`), colour="blue") +
+  geom_line(aes(y=`curva 23`), colour="blue") +
+  ylim(-70, -35) + 
+  xlab("Tempo") + ylab("Curvas Bolus")
+```
+
+Grupo dos pacientes
+```{r}
+ggplot(data_y, aes(X)) +                    
+  geom_line(aes(y=`curva 1`), colour="red") + 
+  geom_line(aes(y=`curva 2`), colour="red") +
+  geom_line(aes(y=`curva 3`), colour="red") +
+  geom_line(aes(y=`curva 4`), colour="red") +
+  geom_line(aes(y=`curva 5`), colour="red") +
+  geom_line(aes(y=`curva 6`), colour="red") +
+  geom_line(aes(y=`curva 7`), colour="red") +
+  geom_line(aes(y=`curva 8`), colour="red") +
+  geom_line(aes(y=`curva 9`), colour="red") +
+  geom_line(aes(y=`curva 10`), colour="red") + 
+  geom_line(aes(y=`curva 11`), colour="red") +
+  geom_line(aes(y=`curva 12`), colour="red") +
+  geom_line(aes(y=`curva 13`), colour="red") +
+  geom_line(aes(y=`curva 14`), colour="red") +
+  ylim(-100, 0) + 
+  xlab("Tempo") + ylab("Curvas Bolus")
+
+```
+
+Grupo controle
+
+```{r}
+
+ggplot(data_y, aes(X)) +                    
+  geom_line(aes(y=`curva 15`), colour="blue") +
+  geom_line(aes(y=`curva 16`), colour="blue") +
+  geom_line(aes(y=`curva 17`), colour="blue") +
+  geom_line(aes(y=`curva 18`), colour="blue") +
+  geom_line(aes(y=`curva 19`), colour="blue") +
+  geom_line(aes(y=`curva 20`), colour="blue") +
+  geom_line(aes(y=`curva 21`), colour="blue") +
+  geom_line(aes(y=`curva 22`), colour="blue") +
+  geom_line(aes(y=`curva 23`), colour="blue") +
+  ylim(-100, 0) + 
+  xlab("Tempo") + ylab("Curvas Bolus")
+
+```
+
+
+
+
+
+## Análise das curvas bolus lado direito
+
+
+Aplicação da função gamma usando os parâmetros em função dos paciêntes.
+
+```{r}
+data2 = data[-c(16),]
+
+rownames(data2) <- seq(1, 24)
+
+x <- seq(0, 70, 0.01)
+
+data_y <- data.frame('y' = rep(0, 7001))
+
+for (i in 1:nrow(data2)){
+  
+  y_1 <- simulacao(data2[i, 10], data2[i, 11], data2[i, 12])
+  data_y <- cbind(data_y, y_1)
+  
+}
+
+curvas = rep('curva', ncol(data_y))
+curvas2 = seq(0, 24)
+curvas2 = as.character(curvas2)
+names_data_y <- paste(curvas, curvas2)
+colnames(data_y) <- names_data_y
+data_y$X <- x
+
+
+```
+
+Gerando as curvas para todos os paciêntes.
+```{r}
+
+ggplot(data_y, aes(X)) +                    
+  geom_line(aes(y=`curva 1`), colour="red") + 
+  geom_line(aes(y=`curva 2`), colour="red") +
+  geom_line(aes(y=`curva 3`), colour="red") +
+  geom_line(aes(y=`curva 4`), colour="red") +
+  geom_line(aes(y=`curva 5`), colour="red") +
+  geom_line(aes(y=`curva 6`), colour="red") +
+  geom_line(aes(y=`curva 7`), colour="red") +
+  geom_line(aes(y=`curva 8`), colour="red") +
+  geom_line(aes(y=`curva 9`), colour="red") +
+  geom_line(aes(y=`curva 10`), colour="red") + 
+  geom_line(aes(y=`curva 11`), colour="red") +
+  geom_line(aes(y=`curva 12`), colour="red") +
+  geom_line(aes(y=`curva 13`), colour="red") +
+  geom_line(aes(y=`curva 14`), colour="red") +
+  geom_line(aes(y=`curva 15`), colour="red") +
+  geom_line(aes(y=`curva 16`), colour="blue") +
+  geom_line(aes(y=`curva 17`), colour="blue") +
+  geom_line(aes(y=`curva 18`), colour="blue") +
+  geom_line(aes(y=`curva 19`), colour="blue") +
+  geom_line(aes(y=`curva 20`), colour="blue") +
+  geom_line(aes(y=`curva 21`), colour="blue") +
+  geom_line(aes(y=`curva 22`), colour="blue") +
+  geom_line(aes(y=`curva 23`), colour="blue") +
+  geom_line(aes(y=`curva 24`), colour="blue") +
+  ylim(-100, 100) + 
+  xlab("Tempo") + ylab("Curvas Bolus")
+```
+
+Grupo dos pacientes
+```{r}
+ggplot(data_y, aes(X)) +                    
+  geom_line(aes(y=`curva 1`), colour="red") + 
+  geom_line(aes(y=`curva 2`), colour="red") +
+  geom_line(aes(y=`curva 3`), colour="red") +
+  geom_line(aes(y=`curva 4`), colour="red") +
+  geom_line(aes(y=`curva 5`), colour="red") +
+  geom_line(aes(y=`curva 6`), colour="red") +
+  geom_line(aes(y=`curva 7`), colour="red") +
+  geom_line(aes(y=`curva 8`), colour="red") +
+  geom_line(aes(y=`curva 9`), colour="red") +
+  geom_line(aes(y=`curva 10`), colour="red") + 
+  geom_line(aes(y=`curva 11`), colour="red") +
+  geom_line(aes(y=`curva 12`), colour="red") +
+  geom_line(aes(y=`curva 13`), colour="red") +
+  geom_line(aes(y=`curva 14`), colour="red") +
+  geom_line(aes(y=`curva 15`), colour="red") +
+  ylim(-100, 100) + 
+  xlab("Tempo") + ylab("Curvas Bolus")
+
+```
+
+Grupo controle
+
+```{r}
+
+ggplot(data_y, aes(X)) +                    
+  geom_line(aes(y=`curva 16`), colour="blue") +
+  geom_line(aes(y=`curva 17`), colour="blue") +
+  geom_line(aes(y=`curva 18`), colour="blue") +
+  geom_line(aes(y=`curva 19`), colour="blue") +
+  geom_line(aes(y=`curva 20`), colour="blue") +
+  geom_line(aes(y=`curva 21`), colour="blue") +
+  geom_line(aes(y=`curva 22`), colour="blue") +
+  geom_line(aes(y=`curva 23`), colour="blue") +
+  geom_line(aes(y=`curva 24`), colour="blue") +
+  ylim(-70, -50) + 
+  xlab("Tempo") + ylab("Curvas Bolus")
+
+```
